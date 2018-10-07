@@ -25,19 +25,6 @@
         $(document).ready(function() {
             $('#paramGrid').ParameterGrid();
 
-            var arrayContains = function(array, obj) {
-                var i = array.length;
-                while (i--) {
-                    if ((obj.equals !== undefined) && (array[i].equals !== undefined)) {
-                        if (array[i].equals(obj)) {
-                            return true;
-                        }
-                    } else if (array[i] === obj) {
-                        return true;
-                    }
-                }
-                return false;
-            };
             $('#sql').on('input',
                 function(e) {
                     var sql = $(e.currentTarget).val();
