@@ -1,90 +1,35 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <link rel="stylesheet" href="http://kendo.cdn.telerik.com/2018.3.911/styles/kendo.common.min.css">
-        <link rel="stylesheet" href="http://kendo.cdn.telerik.com/2018.3.911/styles/kendo.blueopal.min.css" />
-    </head>
-    <body>
-        <p>Parameters can be specified with the syntax: {{[name]:[type]}}</p>
-        <textarea
-          id="sql"
-          rows="15"
-          cols="50"
-          >SELECT * FROM [Participant]</textarea>
-          
-          <div id="paramGrid"></div>
+<head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="http://kendo.cdn.telerik.com/2018.3.911/styles/kendo.common.min.css">
+    <link rel="stylesheet" href="http://kendo.cdn.telerik.com/2018.3.911/styles/kendo.blueopal.min.css" />
+</head>
+<body>
+    <p>Parameters can be specified with the syntax: {{[name]:[type]}}</p>
+    <textarea id="sql"
+              rows="15"
+              cols="50">SELECT * FROM [Participant]</textarea>
 
-        <script
-          src="https://code.jquery.com/jquery-3.3.1.min.js"
-          integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
-          crossorigin="anonymous"></script>
-        <script src="http://kendo.cdn.telerik.com/2018.3.911/js/kendo.all.min.js"></script>
-        <script>
-        var Howells = Howells || {};
-        Howells.SqlEditor = Howells.SqlEditor || {};
+    <div id="paramGrid"></div>
 
-        
-        Howells.SqlEditor.SqlParameter = (function(){
-            var parameter = function(definition){
-                var parts = definition.split(':');
-                var name = parts[0];
-                var type = 'string';
-                if (parts.length > 1){
-                    type = parts[1];
-                }
-                
-                this.getName = function(){ return name; };
-                this.getType = function(){ return type; };
-            };
-        
-            parameter.prototype.equals = function(obj) {
-                /*Make sure the object is of the same type as this*/
-                if(typeof obj != typeof this){
-                    return false;
-                }
-                return this.getName() === obj.getName() && this.getType() === obj.getType();
-            };
-            
-            parameter.prototype.toData = function(){
-                return {
-                    Name: this.getName(), 
-                    Type: this.getType()
-                };
-            };
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+            crossorigin="anonymous"></script>
+    <script src="http://kendo.cdn.telerik.com/2018.3.911/js/kendo.all.min.js"></script>
+    <script src="Script/Solid/SqlParameter.js"></script>
+    <script src="Script/Solid/SqlQueryDefinition.js"></script>
+    <script src="Script/Solid/ParameterGrid.js"></script>
+    <script>
 
-            return parameter;
-        })();
+        $(document).ready(function() {
+            $('#paramGrid').ParameterGrid();
 
-        $(document).ready(function(){
-            var parametersDs = {
-                schema: {
-                    model: {
-                        fields: {
-                            Name: { type: "string" },
-                            Type: { type: "string" }
-                        }
-                    }
-                }
-            };
-        
-            $('#paramGrid').kendoGrid({
-                dataSource: parametersDs,
-                height: 200,
-                scollable: true,
-                sortable: true,
-                filterable: false,
-                columns: [
-                    "Name",
-                    "Type"
-                ]
-            });
-    
-            var arrayContains = function(array, obj){
+            var arrayContains = function(array, obj) {
                 var i = array.length;
                 while (i--) {
-                    if ((obj.equals !== undefined) && (array[i].equals !== undefined)){
-                        if (array[i].equals(obj)){
+                    if ((obj.equals !== undefined) && (array[i].equals !== undefined)) {
+                        if (array[i].equals(obj)) {
                             return true;
                         }
                     } else if (array[i] === obj) {
@@ -93,56 +38,18 @@
                 }
                 return false;
             };
-            $('#sql').on('input', function(e){
-                var regex = /\{{2}\s*((\w|\:)+)\s*\}{2}/g;
-                var sql = $(e.currentTarget).val();
+            $('#sql').on('input',
+                function(e) {
+                    var sql = $(e.currentTarget).val();
 
-                var grid = $('#paramGrid').data('kendoGrid');
-                var match;
-                var params = [];
-                do {
-                    match = regex.exec(sql);
-                    if (match) {
-                        var fullMatch = match[0];
-                        var content = match[1];
-                        params.push(new Howells.SqlEditor.SqlParameter(content));
-                    }
-                } while (match);
+                    var grid = $('#paramGrid').data('ParameterGrid');
+                    var definition = new Solid.SqlEditor.SqlQueryDefinition();
+                    var params = definition.getParameters(sql);
 
-                var ds = grid.dataSource.data();
-                var dataToRemove = [];
-                for(var dsj = 0; dsj < ds.length; dsj++){
-                    var datum = ds[dsj];
-                    var paramFromGrid = new Howells.SqlEditor.SqlParameter(datum.Name + ':' + datum.Type);                    
+                    grid.setData(params);
 
-                    if (arrayContains(params, paramFromGrid) === false){
-                        dataToRemove.push(datum);
-                    }
-                }
-                for(var dsk = 0; dsk < dataToRemove.length; dsk++){
-                    grid.dataSource.remove(dataToRemove[dsk]);
-                }
-
-                for(var i=0; i< params.length; i++){
-                    var ds = grid.dataSource.data();
-                    var doAdd=true;
-                    var sqlParam = params[i];
-                    
-                    for (var dsi=0; dsi < ds.length; dsi++){
-                        var datum = ds[dsi];
-                        var paramFromGrid = new Howells.SqlEditor.SqlParameter(datum.Name + ':' + datum.Type);                    
-                        if (paramFromGrid.equals(sqlParam) === true){
-                            doAdd = false;
-                            break;
-                        }
-                    }
-                    if (doAdd === true){
-                        grid.dataSource.insert(sqlParam.toData());
-                    }
-                }
-                grid.refresh();
-            });
+                });
         });
-        </script>
-    </body>
+    </script>
+</body>
 </html>
